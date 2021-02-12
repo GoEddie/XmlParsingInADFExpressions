@@ -1,0 +1,17 @@
+{
+    "name": "JsonService",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "annotations": [],
+        "type": "HttpServer",
+        "typeProperties": {
+            "url": "https://www.gov.uk/bank-holidays.json",
+            "enableServerCertificateValidation": true,
+            "authenticationType": "Anonymous"
+        },
+        "connectVia": {
+            "referenceName": "AutoResolveIntegrationRuntime",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

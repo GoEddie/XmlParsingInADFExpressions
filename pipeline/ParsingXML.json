@@ -1,0 +1,56 @@
+{
+    "name": "ParsingXML",
+    "properties": {
+        "activities": [
+            {
+                "name": "Get Site Map",
+                "type": "WebActivity",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "url": "https://ratings.food.gov.uk/OpenDataFiles/FHRS626en-GB.xml",
+                    "connectVia": {
+                        "referenceName": "AutoResolveIntegrationRuntime",
+                        "type": "IntegrationRuntimeReference"
+                    },
+                    "method": "GET"
+                }
+            },
+            {
+                "name": "Set Variable",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Get Site Map",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "VenueName",
+                    "value": {
+                        "value": "@xpath(xml(activity('Get Site Map').output.Response),'string(//*[name()=\"FHRSID\"][text()=\"1073399\"]/../*[name()=\"BusinessName\"])')",
+                        "type": "Expression"
+                    }
+                }
+            }
+        ],
+        "variables": {
+            "VenueName": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2021-02-12T08:19:19Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

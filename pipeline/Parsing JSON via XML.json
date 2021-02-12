@@ -1,0 +1,232 @@
+{
+    "name": "Parsing JSON via XML",
+    "properties": {
+        "activities": [
+            {
+                "name": "Get All Holiday Dates",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "JsonSource",
+                        "storeSettings": {
+                            "type": "HttpReadSettings",
+                            "requestMethod": "GET"
+                        },
+                        "formatSettings": {
+                            "type": "JsonReadSettings"
+                        }
+                    },
+                    "dataset": {
+                        "referenceName": "JsonHolidays",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "Get Scotland Events",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Get All Holiday Dates",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "scotlandEvents",
+                    "value": {
+                        "value": "@string(first(activity('Get All Holiday Dates').output.value).scotland.events)",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Create Well Formed JSON",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Get Scotland Events",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "jsonWithSingleParent",
+                    "value": {
+                        "value": "{ \n \"blah\":\n { \n  \"event\":\n                @{variables('scotlandEvents')}\n }\n}",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Convert To XML",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Create Well Formed JSON",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "xmlDocument",
+                    "value": {
+                        "value": "@string(xml(json(variables('jsonWithSingleParent'))))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "XPath To Get Date",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Convert To XML",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "goodFridayDate",
+                    "value": {
+                        "value": "@xpath(xml(variables('xmlDocument')),'string(//*[name()=\"title\"][text()=\"Good Friday\"]/../*[name()=\"date\"][contains(text(), \"2021\")])')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Get English Events",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Get All Holiday Dates",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "englishEvents",
+                    "value": {
+                        "value": "@string(first(json(replace(string(\n       activity('Get All Holiday Dates').output.value)\n   , 'england-and-wales', 'englandandwales'))).englandandwales.events)",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Create Well Formed English JSON",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Get English Events",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "englishJsonWithSingleParent",
+                    "value": {
+                        "value": "{ \n \"blah\":\n { \n  \"event\":\n                @{variables('englishEvents')}\n }\n}",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Convert To English XML",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Create Well Formed English JSON",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "englishXmlDocument",
+                    "value": {
+                        "value": "@string(xml(json(variables('englishJsonWithSingleParent'))))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "XPath To Get English Date",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Convert To English XML",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "englishGoodFridayDate",
+                    "value": {
+                        "value": "@xpath(xml(variables('englishXmlDocument')),'string(//*[name()=\"title\"][text()=\"Good Friday\"]/../*[name()=\"date\"][contains(text(), \"2021\")])')",
+                        "type": "Expression"
+                    }
+                }
+            }
+        ],
+        "variables": {
+            "goodFridayDate": {
+                "type": "String"
+            },
+            "jsonWithSingleParent": {
+                "type": "String"
+            },
+            "scotlandEvents": {
+                "type": "String"
+            },
+            "xmlDocument": {
+                "type": "String"
+            },
+            "englishGoodFridayDate": {
+                "type": "String"
+            },
+            "englishJsonWithSingleParent": {
+                "type": "String"
+            },
+            "englishEvents": {
+                "type": "String"
+            },
+            "englishXmlDocument": {
+                "type": "String"
+            },
+            "englishDateOneStep": {
+                "type": "String"
+            },
+            "scotishDateOneStep": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2021-02-11T22:08:00Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,33 @@
+{
+	"name": "Broken",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [
+					{
+						"name": "A B ",
+						"value": "c"
+					}
+				],
+				"typeProperties": {
+					"variableName": "A B",
+					"value": "c "
+				}
+			}
+		],
+		"parameters": {
+			"A_B": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"A B": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

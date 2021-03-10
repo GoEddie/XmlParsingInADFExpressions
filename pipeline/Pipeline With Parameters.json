@@ -14,7 +14,7 @@
 			}
 		],
 		"parameters": {
-			"P 1": {
+			"P_1": {
 				"type": "string"
 			}
 		},

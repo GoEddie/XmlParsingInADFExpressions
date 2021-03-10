@@ -1,0 +1,28 @@
+{
+	"name": "Pipeline With Parameters",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "V1",
+					"value": "dddd"
+				}
+			}
+		],
+		"parameters": {
+			"P 1": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"V1": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

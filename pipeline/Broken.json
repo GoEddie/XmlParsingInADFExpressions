@@ -19,7 +19,7 @@
 			}
 		],
 		"parameters": {
-			"A_B": {
+			"A B": {
 				"type": "string"
 			}
 		},

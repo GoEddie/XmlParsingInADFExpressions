@@ -1,0 +1,566 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "dklsjalkajdakldj"
+		},
+		"AzureDataLakeStorage1_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage1'"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://dklajsldksajda.dfs.core.windows.net"
+		},
+		"JsonService_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://www.gov.uk/bank-holidays.json"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Broken')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [
+							{
+								"name": "A B ",
+								"value": "c"
+							}
+						],
+						"typeProperties": {
+							"variableName": "A B",
+							"value": "c "
+						}
+					}
+				],
+				"parameters": {
+					"A B": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"A B": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Parsing JSON via XML')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get All Holiday Dates",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "HttpReadSettings",
+									"requestMethod": "GET"
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "JsonHolidays",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "Get Scotland Events",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get All Holiday Dates",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "scotlandEvents",
+							"value": {
+								"value": "@string(first(activity('Get All Holiday Dates').output.value).scotland.events)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Create Well Formed JSON",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get Scotland Events",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "jsonWithSingleParent",
+							"value": {
+								"value": "{ \n \"blah\":\n { \n  \"event\":\n                @{variables('scotlandEvents')}\n }\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Convert To XML",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Create Well Formed JSON",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "xmlDocument",
+							"value": {
+								"value": "@string(xml(json(variables('jsonWithSingleParent'))))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "XPath To Get Date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Convert To XML",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "goodFridayDate",
+							"value": {
+								"value": "@xpath(xml(variables('xmlDocument')),'string(//*[name()=\"title\"][text()=\"Good Friday\"]/../*[name()=\"date\"][contains(text(), \"2021\")])')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Get English Events",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get All Holiday Dates",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "englishEvents",
+							"value": {
+								"value": "@string(first(json(replace(string(\n       activity('Get All Holiday Dates').output.value)\n   , 'england-and-wales', 'englandandwales'))).englandandwales.events)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Create Well Formed English JSON",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get English Events",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "englishJsonWithSingleParent",
+							"value": {
+								"value": "{ \n \"blah\":\n { \n  \"event\":\n                @{variables('englishEvents')}\n }\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Convert To English XML",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Create Well Formed English JSON",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "englishXmlDocument",
+							"value": {
+								"value": "@string(xml(json(variables('englishJsonWithSingleParent'))))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "XPath To Get English Date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Convert To English XML",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "englishGoodFridayDate",
+							"value": {
+								"value": "@xpath(xml(variables('englishXmlDocument')),'string(//*[name()=\"title\"][text()=\"Good Friday\"]/../*[name()=\"date\"][contains(text(), \"2021\")])')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"variables": {
+					"goodFridayDate": {
+						"type": "String"
+					},
+					"jsonWithSingleParent": {
+						"type": "String"
+					},
+					"scotlandEvents": {
+						"type": "String"
+					},
+					"xmlDocument": {
+						"type": "String"
+					},
+					"englishGoodFridayDate": {
+						"type": "String"
+					},
+					"englishJsonWithSingleParent": {
+						"type": "String"
+					},
+					"englishEvents": {
+						"type": "String"
+					},
+					"englishXmlDocument": {
+						"type": "String"
+					},
+					"englishDateOneStep": {
+						"type": "String"
+					},
+					"scotishDateOneStep": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-02-11T22:08:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/JsonHolidays')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ParsingXML')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Site Map",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://ratings.food.gov.uk/OpenDataFiles/FHRS626en-GB.xml",
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"method": "GET",
+							"headers": {}
+						}
+					},
+					{
+						"name": "Set Variable",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get Site Map",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "VenueName",
+							"value": {
+								"value": "@xpath(xml(activity('Get Site Map').output.Response),'string(//*[name()=\"FHRSID\"][text()=\"1073399\"]/../*[name()=\"BusinessName\"])')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"variables": {
+					"VenueName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-02-12T08:19:19Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Pipeline With Parameters')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "V1",
+							"value": "dddd"
+						}
+					}
+				],
+				"parameters": {
+					"P_12": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"V1": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/JsonHolidays')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "JsonService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation"
+					}
+				},
+				"schema": {
+					"type": "object",
+					"properties": {
+						"england-and-wales": {
+							"type": "object",
+							"properties": {
+								"division": {
+									"type": "string"
+								},
+								"events": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"title": {
+												"type": "string"
+											},
+											"date": {
+												"type": "string"
+											},
+											"notes": {
+												"type": "string"
+											},
+											"bunting": {
+												"type": "boolean"
+											}
+										}
+									}
+								}
+							}
+						},
+						"scotland": {
+							"type": "object",
+							"properties": {
+								"division": {
+									"type": "string"
+								},
+								"events": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"title": {
+												"type": "string"
+											},
+											"date": {
+												"type": "string"
+											},
+											"notes": {
+												"type": "string"
+											},
+											"bunting": {
+												"type": "boolean"
+											}
+										}
+									}
+								}
+							}
+						},
+						"northern-ireland": {
+							"type": "object",
+							"properties": {
+								"division": {
+									"type": "string"
+								},
+								"events": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"title": {
+												"type": "string"
+											},
+											"date": {
+												"type": "string"
+											},
+											"notes": {
+												"type": "string"
+											},
+											"bunting": {
+												"type": "boolean"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/JsonService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage1')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage1_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/JsonService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "HttpServer",
+				"typeProperties": {
+					"url": "[parameters('JsonService_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
